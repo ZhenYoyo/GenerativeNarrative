@@ -1,0 +1,134 @@
+using OpenAI_API;
+using OpenAI_API.Chat;
+using OpenAI_API.Models;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using OpenCVForUnityExample;
+
+public class OpenAIController : MonoBehaviour
+{
+    public TMP_Text textField;
+    public TMP_InputField inputField;
+    public Button okButton;
+
+    //here is to get the objectdetection function
+    ObjectDetectionModi objectDetectionModi;
+    public GameObject DataSource;
+    public string Objecttype;
+    public string Combinedtext;
+
+
+
+    private OpenAIAPI api;
+    private List<ChatMessage> messages;
+
+    void Awake()
+    {
+        objectDetectionModi = DataSource.GetComponent<ObjectDetectionModi>();
+    }
+
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        api = new OpenAIAPI(Environment.GetEnvironmentVariable("OPENAI_API_KEY", EnvironmentVariableTarget.User));
+        //api = new OpenAIAPI(Environment.GetEnvironmentVariable("OPEN_API_KEY", EnvironmentVariableTarget.User));
+        StartConverstation();
+        okButton.onClick.AddListener(() => GetResponse());
+    }
+
+    private void Update()
+    {
+        Objecttype = objectDetectionModi.ClassType;
+    }
+
+    private void StartConverstation()
+    {
+        messages = new List<ChatMessage> { 
+            //By zhen: main part to adjust the prompt
+            //new ChatMessage(ChatMessageRole.System, "You are a fairy, you will tell fairytale to the player based on his or her input. You shoule describe the story in storytelling style. The player will give you the names of the common objects. You will co-create a object-oriented fantasy with the player. The fantasy should be based on the semiotic of the object that the player gives you.  When you said the words 20 times in total, you will finish the story and say 'I am tired' to the player. Requires five objects in total and you remind the player to show each object to you in the beginning and interval of your conversation.")
+            new ChatMessage(ChatMessageRole.System, "You are a fairy, you will tell fairytale to the player based on his or her input. The player will give you the names of the common objects. You will co-create a object-oriented fantasy with the player.")
+        };
+
+        inputField.text = "";
+        //By zhen: text initializing
+        string startString = "Gennie is sleeping. Pick and object to wake her up.";
+        textField.text= startString;
+        Debug.Log(startString);
+    }
+
+    private async void GetResponse()
+    {
+        if (inputField.text.Length < 1)
+        {
+            return;
+        }
+        //throw new NotImplementedException();
+
+        //Disable the OK button
+        okButton.enabled = false;
+
+        //Fill the user message from the input field;
+        ChatMessage userMessage = new ChatMessage();
+        userMessage.Role = ChatMessageRole.User;
+
+        //By Zhen~try to import the classtype here!~the idea of this part is to combined player's input with the detected object
+        if (Objecttype != "person")
+        {
+            Combinedtext = inputField.text + "" + Objecttype;
+        }
+        else if(Objecttype == "person")
+        {
+            Combinedtext = inputField.text + "";
+        }
+        //
+
+        userMessage.Content = Combinedtext;
+        //below is the original one
+        //userMessage.Content = inputField.text;
+        if (userMessage.Content.Length > 100)
+        {
+            //limit message to 100;
+            userMessage.Content = userMessage.Content.Substring(0, 100);
+        }
+        
+        Debug.Log(string.Format("{0}: {1}", userMessage.rawRole, userMessage.Content));
+
+        messages.Add(userMessage);
+
+        //update the text field with the user message
+        textField.text = string.Format("You: {0}", userMessage.Content);
+
+        //clear the input field
+        inputField.text = "";
+
+        //Send the entire chat to OpenAI to get the next message
+        var chatResult = await api.Chat.CreateChatCompletionAsync(new ChatRequest()
+        {
+            Model = Model.ChatGPTTurbo,
+            //temparature is to set the creativity of the bot
+            Temperature = 0.1,
+            MaxTokens = 50,
+            Messages = messages
+        });
+
+        //Get the response message
+        ChatMessage responseMessage = new ChatMessage();
+        responseMessage.Role = chatResult.Choices[0].Message.Role;
+        responseMessage.Content = chatResult.Choices[0].Message.Content;
+        Debug.Log(string.Format("{0}: {1}", responseMessage.rawRole, responseMessage.Content));
+
+        //add the response to the list of messages
+        messages.Add(responseMessage);
+
+        //update the text field with the response
+        textField.text = string.Format("You: {0}\n\nGennie: {1}", userMessage.Content, responseMessage.Content);
+
+        //re-enable the OK button
+        okButton.enabled = true;
+       }
+    }
