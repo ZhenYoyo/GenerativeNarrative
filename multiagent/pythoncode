@@ -1,0 +1,87 @@
+import os
+import openai
+
+openai.api_key = "sk-f29A4tQuVfHMbdcgqHrNIF3QRVJmbpnrqucE7V7062r4fz8L"
+openai.api_base = "https://api.f2gpt.com/v1"
+
+agent1Messages = []
+agent2Messages = []
+TurningPoint = 0
+#print("\n" + "Greetings!" + "\n")  
+user_input = ""
+startConversation = True
+while input != "quit()": #Place the whole conversation in a loop  
+ if TurningPoint == 0:
+        system_msp = "start of the story"
+        agent2Awake =True #hypothezing that the beginning agent2 is awake
+        agent3Awake =False
+ elif TurningPoint == 1:
+        system_msp = "TP1"
+        print("[teststring] TP1 replaced") #fordebug
+ elif TurningPoint == 2:
+        system_msp = "TP2"
+        print("[teststring] TP2 replaced") #fordebug
+ elif TurningPoint == 3:
+        system_msp ="TP3"
+        print("[teststring] TP3 replaced") #fordebug
+
+#conversation module for agent1, our main character
+ agent1Messages.append({"role": "system", "content": system_msp})
+ agent1Messages.append({"role": "assistant", "content": "once upon a time, there is a small paper like planet"})
+ agent1Messages.append({"role": "user", "content": "our character, rock, falling down on the planet, he meets a flower, called FLAOWER"})  
+
+#persona setting for FLAORA
+ agent2msg ="you are a flower"
+ agent2Messages.append({"role": "system", "content": agent2msg})
+ agent2Messages.append({"role": "assistant", "content": "hahaha! I am so lovely"})
+ print("\n"+"once upon a time, there is a small paper like planet. our character, rock, falling down on the planet, he meets a flower, called FLAOWER"+"\n")
+
+ user_input = input()
+ if user_input != "DEBUG": #normal conversation
+  #condition1:agent2 is awake
+  if agent2Awake == True:
+     if startConversation == True:
+        finishReply= "nonstop" #fordebug
+        responseAgent1 = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=agent1Messages,
+        temperature=0.8)
+        agent1Reply = responseAgent1["choices"][0]["message"]["content"]
+        agent1debugReply = str(responseAgent1)
+        finishReply= responseAgent1.choices[0].finish_reason
+        agent1Messages.append({"role": "assistant", "content": agent1Reply})
+        print("\n" + agent1Reply + "\n")
+        print("\n" + "[teststring]"+ finishReply + "\n") #fordebug
+        startConversation ==False
+
+     if startConversation == False:
+        finishReply= "nonstopbutfor2" #fordebug
+        responseAgent1 = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=agent1Messages,
+        temperature=0.8)
+        agent1Reply = responseAgent1["choices"][0]["message"]["content"]
+        agent1debugReply = str(responseAgent1)
+        finishReply= responseAgent1.choices[0].finish_reason
+        agent1Messages.append({"role": "assistant", "content": agent1Reply})
+        print("\n" + agent1Reply + "\n")
+        print("\n" + "[teststring]"+ finishReply + "\n") #fordebug
+    
+     if finishReply =="stop" :
+      print("\n" + "[teststring] agent 2 received the message" + "\n")
+      agent1_input = agent1Reply
+      responseAgent2 = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=agent2Messages,
+        temperature=0.8)
+     agent2Reply = responseAgent2["choices"][0]["message"]["content"]
+     agent1Messages.append({"role": "user", "content": agent1Reply})
+     print("\n" + "from falower:"+ agent2Reply + "\n")
+
+ if user_input == "DEBUG": #debug mode
+  print("\n" + agent1debugReply + "\n")
+
+#to see whether will switch to the next Turning Point
+ if "depart" in agent1Reply:
+  TurningPoint += 1
+  print("String 'depart' is found in the reply.")
