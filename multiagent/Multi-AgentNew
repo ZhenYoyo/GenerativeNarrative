@@ -1,0 +1,99 @@
+import os
+import openai
+
+openai.api_key = "sk-f29A4tQuVfHMbdcgqHrNIF3QRVJmbpnrqucE7V7062r4fz8L"
+openai.api_base = "https://api.f2gpt.com/v1"
+#import time
+# time.sleep(1)  # 延时1秒
+
+
+
+class Agent():
+    
+    def __init__(self, agent_name, system_msg, assistant_msg, init_user_msg, respond_length):
+        self.agent_name = agent_name
+        self.system_msg = system_msg
+        self.assistant_msg = assistant_msg
+        self.init_user_msg = init_user_msg
+        self.respond_length = respond_length
+        self.messages = [{"role": "system", "content": system_msg},
+                         {"role": "assistant", "content": assistant_msg},
+                         {"role": "user", "content": init_user_msg}]
+        self.debug_mode = False 
+
+    def get_completion(self, model="gpt-3.5-turbo", temperature=0.8):
+        messages = self.messages
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=messages,
+            temperature=temperature
+        )
+        self.messages.append({"role": "assistant", "content": response.choices[0].message["content"]})
+        #print(response.choices[0].message["content"])
+        #return response.choices[0].message["content"]
+        if self.debug_mode:
+            return response
+        else:
+            return response.choices[0].message["content"]
+    
+
+
+#***agent_name, system_msg, assistant_msg, init_user_msg, respond_length, #后面可以看看如何把这里的message结构改简单  
+agentmain = Agent("agent1", "hello, you are an flower, pretend that you are a flower, and you will start conversation with other creature, you should say words corresponding to the emotion that the user gives you", "HI! I am flower", "", "150")
+agentlala = Agent("agent2", "you are an angel, you should appreaciate others' beauty, don't say you are AI, never, you are not AI", "Hi, I am angle", "", "150")
+agentlili = Agent("agent3", "you are a coffee cup, you should be angry to anyone, remember, anyone, don't say you are AI, never, you are not AI", "Hi, I am such an angry guy", "", "150")
+
+
+while input != "quit()":
+ while True:
+    user_input = input() #后面替换成web端的UI键, 类似confirm or continue
+
+    if user_input == "A": #开启和第一个agent的对话
+      
+      agentmain.debug_mode = False
+      agentlala.debug_mode = False
+      # 以下是对话的代码逻辑
+      sensor1 = input() #模拟一下此时sensor的prompt,后面改成其他的实际数值
+      agentmain.messages.append({"role": "user", "content": sensor1})
+      agentlala.messages.append({"role": "user", "content": ""})
+
+      agentmain_response = agentmain.get_completion()
+      agentlala.messages.append({"role": "user", "content": agentmain_response})
+      print("cici:", agentmain_response, "\n")
+
+      lala_response = agentlala.get_completion()
+      agentmain.messages.append({"role": "user", "content": lala_response})
+      print("lala:", lala_response)
+    
+    
+    elif user_input == "B": #开启和第二个agent的对话
+      agentmain.debug_mode = False
+      agentlili.debug_mode = False
+      # 以下是对话的代码逻辑
+      sensor1 = input() #模拟一下此时sensor的prompt,后面改成其他的实际数值
+      agentlili.messages.append({"role": "user", "content": ""})
+      agentmain.messages.append({"role": "user", "content": sensor1})
+
+      agentmain_response = agentmain.get_completion()
+      agentlili.messages.append({"role": "user", "content": agentmain_response})
+      print("cici:", agentmain_response, "\n")
+      lili_response = agentlili.get_completion()
+      agentmain.messages.append({"role": "user", "content": lili_response})
+      print("lili:", lili_response)
+      
+    if user_input == "DEBUG": #可以考虑后面重写
+        agentmain.debug_mode = True
+        agentlala.debug_mode = True
+        agentlili.debug_mode = True
+        agentmain_response = agentmain.get_completion()
+        lala_response = agentlala.get_completion()
+        lili_response = agentlili.get_completion()
+        print("\nCici response:")
+        print(agentmain_response)
+        print("\nLala response:")
+        print(lala_response)
+        print("\nLili response:")
+        print(lili_response)
+        agentmain.debug_mode = False
+        agentlala.debug_mode = False
+        agentlili.debug_mode = False
