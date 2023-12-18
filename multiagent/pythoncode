@@ -1,7 +1,7 @@
 import os
 import openai
 
-openai.api_key = "sk-f29A4tQuVfHMbdcgqHrNIF3QRVJmbpnrqucE7V7062r4fz8L"
+openai.api_key = ""
 openai.api_base = "https://api.f2gpt.com/v1"
 
 agent1Messages = []
