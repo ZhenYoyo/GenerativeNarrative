@@ -1,0 +1,79 @@
+
+//using TMPro;
+//using UnityEngine.UI;
+
+
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using UnityEngine;
+using System.Threading;
+
+
+public class MyListener : MonoBehaviour
+{
+    Thread thread;
+    public int connectionPort = 25001;
+    TcpListener server;
+    TcpClient client;
+    bool running;
+    public string receivedprompt;
+
+
+  //  public TMP_Text textField;
+    //public Button okButton;
+
+
+    void Start()
+    {
+        // Receive on a separate thread so Unity doesn't freeze waiting for data
+        ThreadStart ts = new ThreadStart(GetData);
+        thread = new Thread(ts);
+        thread.Start();
+    }
+
+    void GetData()
+    {
+        // Create the server
+        server = new TcpListener(IPAddress.Any, connectionPort);
+        server.Start();
+
+        // Create a client to get the data stream
+        client = server.AcceptTcpClient();
+
+        // Start listening
+        running = true;
+        while (running)
+        {
+            Connection();
+        }
+        server.Stop();
+    }
+
+    void Connection()
+    {
+        // Read data from the network stream
+        NetworkStream nwStream = client.GetStream();
+        byte[] buffer = new byte[client.ReceiveBufferSize];
+        int bytesRead = nwStream.Read(buffer, 0, client.ReceiveBufferSize);
+
+        // Decode the bytes into a string
+        string dataReceived = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+
+        // Make sure we're not getting an empty string
+        if (dataReceived != null && dataReceived != "")
+        {
+            // Set receivedprompt to the received data
+            receivedprompt = dataReceived;
+            //textField.text = string.Format(receivedprompt);
+
+        }
+    }
+}
+
+/*    void Update()
+    {
+        textField.text = string.Format(receivedprompt);
+    }
+}
+*/
