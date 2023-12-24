@@ -128,3 +128,61 @@ while True:
             finally:
           
              sock.close()
+
+
+        
+
+
+
+
+    # if msvcrt.kbhit() and msvcrt.getch() == b'a': #开启和第一个agent的对话
+    #   agentmain.debug_mode = False
+    #   agentlala.debug_mode = False
+    #   print("emotion now:", sensorprompt)  # Debug print
+    #   agentmain.messages.append({"role": "user", "content": sensorprompt})
+    #   agentlala.messages.append({"role": "user", "content": ""})
+
+    #   agentmain_response = agentmain.get_completion()
+    #   #agentlala.messages.append({"role": "user", "content": agentmain_response})
+    #   print("cici:", agentmain_response, "\n")
+
+    #   #lala_response = agentlala.get_completion()
+    #   #agentmain.messages.append({"role": "user", "content": lala_response})
+    #   #print("lala:", lala_response)
+      
+    
+    #   else:
+    #     print("no emotion detected")
+        
+    
+    # elif input() == "B": #开启和第二个agent的对话
+    #   agentmain.debug_mode = False
+    #   agentlili.debug_mode = False
+    #   # 以下是对话的代码逻辑
+    #   #sensor1 = input() #模拟一下此时sensor的prompt,后面改成其他的实际数值
+    #   agentlili.messages.append({"role": "user", "content": ""})
+    #   agentmain.messages.append({"role": "user", "content": sensor1})
+
+    #   agentmain_response = agentmain.get_completion()
+    #   agentlili.messages.append({"role": "user", "content": agentmain_response})
+    #   print("cici:", agentmain_response, "\n")
+    #   lili_response = agentlili.get_completion()
+    #   agentmain.messages.append({"role": "user", "content": lili_response})
+    #   print("lili:", lili_response)
+      
+    # if input() == "DEBUG": #可以考虑后面重写
+    #     agentmain.debug_mode = True
+    #     agentlala.debug_mode = True
+    #     agentlili.debug_mode = True
+    #     agentmain_response = agentmain.get_completion()
+    #     lala_response = agentlala.get_completion()
+    #     lili_response = agentlili.get_completion()
+    #     print("\nCici response:")
+    #     print(agentmain_response)
+    #     print("\nLala response:")
+    #     print(lala_response)
+    #     print("\nLili response:")
+    #     print(lili_response)
+    #     agentmain.debug_mode = False
+    #     agentlala.debug_mode = False
+    #     agentlili.debug_mode = False
