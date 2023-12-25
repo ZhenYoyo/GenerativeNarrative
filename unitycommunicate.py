@@ -30,21 +30,19 @@ sensorpromptinuse = ""
 
 #communicationwithUnity
 import socket
+import json
 host, port = "127.0.0.1", 25001
-#data = "1,2,3"
-# SOCK_STREAM means TCP socket
-#sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-data = ""
 
-# try:
-#     # Connect to the server and send the data
-#     sock.connect((host, port))
-#     sock.sendall(data.encode("utf-8"))
-#     response = sock.recv(1024).decode("utf-8")
-#     print (response)
+# Create a TCP socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Bind the socket to the host and port
+server_socket.bind((host, port))
+# Listen for incoming connections
+server_socket.listen(1)
+number = 0 
 
-# finally:
-#     sock.close()
+print("Server is listening on {}:{}".format(host, port))
+
          
 class Agent():
     
@@ -81,7 +79,11 @@ agentlili = Agent("agent3", "you are a coffee cup, you should be angry to anyone
 
 
 while True:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Accept a client connection
+    client_socket, client_address = server_socket.accept()
+    print("Client connected from", client_address)
+
     dataPacket = arduinoData.readline()
     dataPacket = str(dataPacket, 'utf-8')
     dataPacket = dataPacket.strip('\r\n')
@@ -100,89 +102,43 @@ while True:
     else:
         sensorprompt = "none"
 
-    if msvcrt.kbhit() and msvcrt.getch() == b'a': #开启和第一个agent的对话
-        #connected = False
-
-            agentmain.debug_mode = False
-            agentlala.debug_mode = False
-            print("emotion now:", sensorprompt)  # Debug print
-            agentmain.messages.append({"role": "user", "content": sensorprompt})
-            agentlala.messages.append({"role": "user", "content": ""})
-            agentmain_response = agentmain.get_completion()
-            agentlala.messages.append({"role": "user", "content": agentmain_response})
-            print("cici:", agentmain_response, "\n")
-            data = agentmain_response
-            
-            lala_response = agentlala.get_completion()
-            agentmain.messages.append({"role": "user", "content": lala_response})
-            print("lala:", lala_response)
-
-            try: 
-             sock.connect((host, port))
-        #Connect to the server and send the data
-            #sock.connect((host, port))
-             sock.sendall(agentmain_response.encode("utf-8"))
-          #response = sock.recv(1024).decode("utf-8")
-          #print (response)
-
-            finally:
-          
-             sock.close()
-
-
-        
-
-
-
-
-    # if msvcrt.kbhit() and msvcrt.getch() == b'a': #开启和第一个agent的对话
-    #   agentmain.debug_mode = False
-    #   agentlala.debug_mode = False
-    #   print("emotion now:", sensorprompt)  # Debug print
-    #   agentmain.messages.append({"role": "user", "content": sensorprompt})
-    #   agentlala.messages.append({"role": "user", "content": ""})
-
-    #   agentmain_response = agentmain.get_completion()
-    #   #agentlala.messages.append({"role": "user", "content": agentmain_response})
-    #   print("cici:", agentmain_response, "\n")
-
-    #   #lala_response = agentlala.get_completion()
-    #   #agentmain.messages.append({"role": "user", "content": lala_response})
-    #   #print("lala:", lala_response)
-      
     
-    #   else:
-    #     print("no emotion detected")
-        
+    try:
+        while True:
+            if msvcrt.kbhit() and msvcrt.getch() == b'a':
     
-    # elif input() == "B": #开启和第二个agent的对话
-    #   agentmain.debug_mode = False
-    #   agentlili.debug_mode = False
-    #   # 以下是对话的代码逻辑
-    #   #sensor1 = input() #模拟一下此时sensor的prompt,后面改成其他的实际数值
-    #   agentlili.messages.append({"role": "user", "content": ""})
-    #   agentmain.messages.append({"role": "user", "content": sensor1})
+    #if msvcrt.kbhit() and msvcrt.getch() == b'a': #开启和第一个agent的对话
+                agentmain.debug_mode = False
+                agentlala.debug_mode = False
+                print("emotion now:", sensorprompt)  # Debug print
+                agentmain.messages.append({"role": "user", "content": sensorprompt})
+                agentlala.messages.append({"role": "user", "content": ""})
+                agentmain_response = agentmain.get_completion()
+                agentlala.messages.append({"role": "user", "content": agentmain_response})
+                print("cici:", agentmain_response, "\n")
+                
 
-    #   agentmain_response = agentmain.get_completion()
-    #   agentlili.messages.append({"role": "user", "content": agentmain_response})
-    #   print("cici:", agentmain_response, "\n")
-    #   lili_response = agentlili.get_completion()
-    #   agentmain.messages.append({"role": "user", "content": lili_response})
-    #   print("lili:", lili_response)
-      
-    # if input() == "DEBUG": #可以考虑后面重写
-    #     agentmain.debug_mode = True
-    #     agentlala.debug_mode = True
-    #     agentlili.debug_mode = True
-    #     agentmain_response = agentmain.get_completion()
-    #     lala_response = agentlala.get_completion()
-    #     lili_response = agentlili.get_completion()
-    #     print("\nCici response:")
-    #     print(agentmain_response)
-    #     print("\nLala response:")
-    #     print(lala_response)
-    #     print("\nLili response:")
-    #     print(lili_response)
-    #     agentmain.debug_mode = False
-    #     agentlala.debug_mode = False
-    #     agentlili.debug_mode = False
+                mainagentmessage = {"role": "agentmain", "content": agentmain_response}
+                main_agent_message_json = json.dumps(mainagentmessage)
+                client_socket.sendall(main_agent_message_json.encode("utf-8"))
+                print("Sent data to the main agent client", "\n")
+                #mainagentmessage = agentmain_response
+                #client_socket.sendall(mainagentmessage.encode("utf-8"))
+                #print("Sent data to the main agent client","\n")
+
+                lala_response = agentlala.get_completion()
+                agentmain.messages.append({"role": "user", "content": lala_response})
+                print("lala:", lala_response)
+
+                secondagentmessage = {"role": "agentlala", "content": lala_response}
+                lala_agent_message_json = json.dumps(secondagentmessage)
+                client_socket.sendall(lala_agent_message_json.encode("utf-8"))
+                print("Sent data to the second agent client","\n")
+
+              
+    except Exception as e:
+            print("Error:", e)
+
+    finally:
+            # Close the client connection
+            client_socket.close()
