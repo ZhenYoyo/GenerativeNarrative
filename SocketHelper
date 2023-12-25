@@ -1,0 +1,77 @@
+using UnityEngine;
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+
+
+
+public class SocketHelper : MonoBehaviour
+{
+    private Socket clientSocket;
+    private byte[] buffer = new byte[4096];
+    public string receivedPrompt;
+
+    private void Start()
+    {
+        ConnectToServer();
+    }
+
+    private void ConnectToServer()
+    {
+        try
+        {
+            // 创建Socket对象
+            clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            // 连接服务器
+            IPAddress serverIP = IPAddress.Parse("127.0.0.1");
+            IPEndPoint serverEndPoint = new IPEndPoint(serverIP, 25001);
+            clientSocket.Connect(serverEndPoint);
+
+            // 开始异步接收数据
+            clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, ReceiveCallback, null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to connect to the server: " + e.Message);
+        }
+    }
+
+    private void ReceiveCallback(IAsyncResult asyncResult)
+    {
+        try
+        {
+            // 结束接收数据，并获取接收到的字节数
+            int bytesRead = clientSocket.EndReceive(asyncResult);
+
+            if (bytesRead > 0)
+            {
+
+                // 解析接收到的数据
+                string receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                Debug.Log("Received data from server: " + receivedData);
+                receivedPrompt = receivedData;
+
+            }
+
+            // 继续异步接收数据
+            clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, ReceiveCallback, null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to receive data from server: " + e.Message);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // 关闭Socket连接
+        if (clientSocket != null && clientSocket.Connected)
+        {
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
+        }
+    }
+}
