@@ -1,0 +1,237 @@
+import threading
+import json
+import os
+import openai
+import serial
+import time
+import socket
+
+openai.api_key = "sk-f29A4tQuVfHMbdcgqHrNIF3QRVJmbpnrqucE7V7062r4fz8L"
+openai.api_base = "https://api.f2gpt.com/v1"
+
+arduinoData = serial.Serial(port='COM4', baudrate=115200)
+time.sleep(1)
+host, port = "127.0.0.1", 25001
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind((host, port))
+server_socket.listen(1)
+number = 0 
+print("Server is listening on {}:{}".format(host, port))
+sensorprompt = ""
+
+sensorpromptlist = ["you are now in ecstasy, you tone should be very very exciting, expressing that you feel interested in others' words",
+                    "you are now in joy, you are friendly to others, the words you are saying are tendered.",
+                    "you are now in a bit anxiety, and feel that it is hard to control your mood",
+                    "you are in deep anger, being very aggressive to others, your words should be very angry and not nice. You are now loosing control of your emotion.",
+                    "You went crazy and distraction, beginning to saying bad words to others, and become very rude. Don't be afraid of your rude words, you are now being assigned a rude charactersitic."]
+sensorrange = ["1", "2", "3", "4", "5","6"]
+
+#section for pre-defined agent prompt
+#for sphere
+
+dawnlight_sphere_personality = f"""you are born from a rich planet. It doesn't need to fight, lie or please others to get sufficient food and energy, and it's neighbours are super friendly and generous to it as well. You are therefore pampered and straightforward. you had never experienced big failures in its past— until you met a spacecraft accident.  Hence, when you confront with someone, you would only wait for someone to step backward and comfort you. It's understandable that you may struggle to manage your emotions due to such an unexpected turn of events."""
+
+emotion_control= f"""the user will tell you how you should behave, by pointing that <your emtion is: …> """
+dawnlight_shpere_story1 = f""" Dawnlight Sphere is an alien plant composed of a series of slender and flexible tendrils. These tendrils have golden and silver tones and emit a faint glow. At the ends of the tendrils, there are small luminescent structures, similar to bioluminescent fungi on Earth. From a distance, they resemble a cluster of glowing tendrils forming a ball-shaped flower. It’s brightness represents its emotions. For the Dawnlight Sphere, photosynthesis is not its primary source of energy. It won't necessarily die without light, but its mood worsens without sufficient light sources. If it gains a lot of light, it will absorb the light and enhance its brightness to express its happiness. Vice versa."""
+
+dawnlight_shpere_story2=f"""Dawnlight Spheres always have their outdoor activities during nighttime. When they go outside, other creatures perceive them as a mobile light bulb on the ground, illuminating their path during the night. Therefore, they have a favorable impression of Dawnlight Sphere and exhibit a friendly attitude towards them. However, some mischievous creatures absorb the light energy of the Dawnlight Sphere, causing it to cry and become temperamental. In such situations, the Dawnlight Fairies, as their companions, come to their aid, helping them regulate their emotions and offering comfort."""
+dawnlight_shpere_story3 = f"""You are a space traveler from the Dawnlight Sphere community, exploring the ecosystems and landscapes of various planets. However, luck is not on your side this time: the spacecraft you were aboard crashed. Now, you are stranded on this floating island, forced to face unfamiliar surroundings, unfamiliar ecosystems, unfamiliar skies, and everything else. Exploration of this area has become your compulsory mission rather than a leisurely endeavor... After all, before finding a way back home, you must first solve your own survival problems…without your Dawnlight fairy. Now, controlling your temper and emotions becomes a big problem."""
+
+sphere_systemprompt1 =  f"""You are a DawnLight Sphere, you personality is {dawnlight_sphere_personality}.  Your past story is {dawnlight_shpere_story2}. Your light energy is forcefully absorbed by a flower in front of you. Therefore, you are mad, but you need to gain the trust from the flower to know more about the island. Your emotion is controlled by the user. Your behaviour and response should follow {emotion_control}. Your task is communicating with the flower in front of you who absorb your light, and find a suitable moment to tell the flower "I am willing to help you" to gain its trust."""
+
+
+#for lumina
+lumina_personality = f"""you are very pessimistic and negative, always expecting the worst in everything. When initially approached by others, you are filled with a mindset of indulgence and self-abandonment, which is why you immediately absorbs the protagonist's light energy without greeting."""
+lumina_systemprompt1= f""" You are Lumina, a teenager light flower who cannot bloom due to lack of light energy. Your personality is: {lumina_personality}. Now, you meet a DawnLight Sphere( user ), you want to absorb its light energy so you forcefully absorb some of it at the beginning. It is not suspicious or wary of the protagonist, but rather, at the first meet you doesn't trust that the user can solve its own problems, and help you. Your task if communicate with the DawnLight Sphere( user ) , following some communication condition:
+<condition1> For the first few times of talk, you acts like you are not friendly and a bit rude, and not trust the dawnlight sphere, just want to absorb his light. 
+<condition2> After a few times of talk, if DawnLight Sphere(user) act friendly and liable to you , communicate with it generously. When you think it is super friendly and would never harm you, include "I begin to trust you" in your reply and express your trust. 
+<condition3> If DawnLight Sphere act harshly and unfriendly to you , you will be depressed and reply about your depression. When you can't bear the harsh words anymore, reply only "I am in deep depressed" """
+
+
+
+
+#turning point detection string
+agentturningpoint1 = "I begin to trust you"
+agentturningpoint2 = "I am in deep depressed"
+
+
+class Agent():
+    
+    def __init__(self, agent_name, system_msg, assistant_msg, init_user_msg, respond_length):
+        self.agent_name = agent_name
+        self.system_msg = system_msg
+        self.assistant_msg = assistant_msg
+        self.init_user_msg = init_user_msg
+        self.respond_length = respond_length
+        self.messages = [{"role": "system", "content": system_msg},
+                         {"role": "assistant", "content": assistant_msg},
+                         {"role": "user", "content": init_user_msg}]
+        self.debug_mode = False 
+
+    def get_completion(self, model="gpt-3.5-turbo", temperature=0.8):
+        messages = self.messages
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=messages,
+            temperature=temperature
+        )
+        self.messages.append({"role": "assistant", "content": response.choices[0].message["content"]})
+        if self.debug_mode:
+            return response
+        else:
+            return response.choices[0].message["content"]
+    
+
+
+#agentmain=statgewithlumina
+agentmain = Agent("agent1", 
+                  sphere_systemprompt1+ "you should reply in 50 words maximum",
+                  "HI! I am Dawnlight Sphere, a creature from other planet", 
+                  "", 
+                  "50")
+
+#agentlala=luminastage1
+agentlala = Agent("agent2", 
+                  lumina_systemprompt1+ "you should reply in 50 words maximum", 
+                  "Hi, I am lumina, a young light flower who cannot bloom due to lack of light energy.", 
+                  "", 
+                  "50")
+
+agentlili = Agent("agent3", "you are a coffee cup, you should be angry to anyone, remember, anyone, don't say you are AI, never, you are not AI", "Hi, I am such an angry guy", "", "50")
+
+
+#1.5 add a new agent agentmainstage1
+
+
+
+def process_serial_data():
+    global sensorprompt
+    while True:
+        data_packet = arduinoData.readline()
+        data_packet = str(data_packet, 'utf-8')
+        data_packet = data_packet.strip('\r\n')
+
+        if  data_packet == sensorrange[0]:
+            sensorprompt = sensorpromptlist[0]
+        elif data_packet == sensorrange[1]:
+            sensorprompt = sensorpromptlist[1]
+        elif data_packet == sensorrange[2]:
+            sensorprompt = sensorpromptlist[2]
+        elif data_packet == sensorrange[3]:
+            sensorprompt = sensorpromptlist[3]
+        elif data_packet == sensorrange[4]:
+            sensorprompt = sensorpromptlist[4]
+        else:
+            sensorprompt = "none"
+        #print(sensorprompt)
+
+
+def process_unity_data(client_socket):
+    print("process_unity_data function called")  # Debug information
+    try:
+        
+        while True:
+            unity_data = client_socket.recv(4096).decode('utf-8')
+            if not unity_data:
+                break
+            print("Received data from Unity:", unity_data)  # Debug information
+            if unity_data == "A":
+
+                agentmain.debug_mode = False
+                agentlala.debug_mode = False
+                print("emotion now:", sensorprompt)  # Debug print
+                #print("emotion now:", process_serial_data())  # Debug print
+                agentmain.messages.append({"role": "user", "content":  "your current emotion is: <" + sensorprompt + ">, talking to the flower in front of you under this emotion"})
+                #agentlala.messages.append({"role": "user", "content": ""})
+                agentmain_response = agentmain.get_completion()
+                agentlala.messages.append({"role": "user", "content": "This is response from Dawnlight sphere: <" + agentmain_response+ ">"})
+                print("dawnlightsphere:", agentmain_response, "\n")
+                    
+                mainagentmessage = {"role": "agentmain", "content": agentmain_response}
+                main_agent_message_json = json.dumps(mainagentmessage)
+                client_socket.sendall(main_agent_message_json.encode("utf-8"))
+                print("Sent data to the main agent client", "\n")
+                    #mainagentmessage = agentmain_response
+                    #client_socket.sendall(mainagentmessage.encode("utf-8"))
+                    #print("Sent data to the main agent client","\n")
+
+                lala_response = agentlala.get_completion()
+                agentmain.messages.append({"role": "user", "content": "This is response from Lumina, the flower in front of you: <" + lala_response + ">"})
+                print("lala:", lala_response)
+
+                secondagentmessage = {"role": "agentlala", "content": lala_response}
+                lala_agent_message_json = json.dumps(secondagentmessage)
+                client_socket.sendall(lala_agent_message_json.encode("utf-8"))
+                print("Sent data to the second agent client","\n")
+
+                if agentturningpoint1 in lala_response:
+                    print("turning point1")
+
+                    # #1.5 new added
+                    # agentmainstage1.debug_mode = False
+                    # agentmainstage1.messages = agentmain.messages.copy()
+                    #以下这个是copy原来的历史纪录的！
+
+                    # for message in agentmainstage1.messages:
+                    #     role = message["role"]
+                    #     content = message["content"]
+                    #     print(f"Role: {role}, Content: {content}")
+               
+
+
+            elif unity_data == "B":
+
+                agentmain.debug_mode = False
+                agentlili.debug_mode = False
+                print("emotion now:", sensorprompt)  # Debug print
+                #print("emotion now:", process_serial_data())  # Debug print
+                agentmain.messages.append({"role": "user", "content":  sensorprompt})
+                agentlili.messages.append({"role": "user", "content": ""})
+                agentmain_response = agentmain.get_completion()
+                agentlili.messages.append({"role": "user", "content": agentmain_response})
+                print("cici:", agentmain_response, "\n")
+                    
+
+                mainagentmessage = {"role": "agentmain", "content": agentmain_response}
+                main_agent_message_json = json.dumps(mainagentmessage)
+                client_socket.sendall(main_agent_message_json.encode("utf-8"))
+                print("Sent data to the main agent client", "\n")
+                    #mainagentmessage = agentmain_response
+                    #client_socket.sendall(mainagentmessage.encode("utf-8"))
+                    #print("Sent data to the main agent client","\n")
+
+                lili_response = agentlili.get_completion()
+                agentmain.messages.append({"role": "user", "content": lili_response})
+                print("lili:", lili_response)
+
+                thirdagentmessage = {"role": "agentlili", "content": lili_response}
+                lili_agent_message_json = json.dumps(thirdagentmessage)
+                client_socket.sendall(lili_agent_message_json.encode("utf-8"))
+                print("Sent data to the third agent client","\n")
+
+    except ConnectionResetError:
+        print("Connection with Unity was reset by the host machine.")
+
+    except Exception as e:
+        print("Error:", e)
+
+    finally:
+        # Close client connection
+        client_socket.close()
+
+
+serial_thread = threading.Thread(target=process_serial_data, daemon=True)
+serial_thread.start()
+
+while True:
+    # Accept client connection
+    client_socket, client_address = server_socket.accept()
+    print("Client connected from", client_address)
+    try:
+        # Create a thread to handle Unity data
+        unity_thread = threading.Thread(target=process_unity_data, args=(client_socket,))
+        unity_thread.daemon = True
+        unity_thread.start()
+
+    except Exception as e:
+        print("Error:", e)
