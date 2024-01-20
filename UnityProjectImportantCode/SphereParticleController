@@ -1,0 +1,57 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+
+public class SphereParticleController : MonoBehaviour
+{
+
+    [SerializeField] ParticleSystem sys = null;
+    private ParticleSystem.MainModule mainModule;
+    SocketJSON socketJson;
+    [SerializeField] GameObject mainagent;
+    public int lightvalue = 0;
+    private int previousLightValue;
+
+    void Awake()
+    {
+        socketJson = mainagent.GetComponent<SocketJSON>();
+    }
+
+    private void Start()
+    {
+        mainModule = sys.main;
+    }
+
+
+    private void RestartParticleSystem()
+    {
+        sys.Stop();
+        //sys.Clear(); // 可选：清空粒子系统中的现有粒子
+        sys.Play();
+    }
+
+    private void Update()
+    {
+        lightvalue = int.Parse(socketJson.lightmessage);
+        //mainModule.startSize = lightvalue*5;
+        mainModule.simulationSpeed = 20;
+
+        if (lightvalue!= previousLightValue)
+        {
+            mainModule.startSize = (5-lightvalue) * 5;
+            RestartParticleSystem();
+            //sys.Play();
+            previousLightValue = lightvalue;
+        }
+
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            sys.Stop();
+            Debug.Log("hahaha");
+            //PlayParticleEffect();
+        }
+    }
+}
