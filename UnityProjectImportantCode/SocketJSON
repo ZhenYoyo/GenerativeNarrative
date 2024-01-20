@@ -1,0 +1,199 @@
+//this code should be attached to the main character
+using UnityEngine;
+using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+
+[System.Serializable]
+ public class Message
+{
+    public string role;
+    public string content;
+}
+
+public class SocketJSON : MonoBehaviour
+{
+    private Socket clientSocket;
+    private byte[] buffer = new byte[4096];
+    public string receivedPrompt;
+    public string agentmainresponse;
+    public string agent2response;
+    public string agent3response;
+    public string TPmanagerresponse;
+    public string lightmessage;
+    public GameObject agent2area;
+    public GameObject agent3area;
+
+    private void Start()
+    {
+        ConnectToServer();
+    }
+
+private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject == agent2area)
+        {
+            SendMessageToServer("A");
+            /*
+            if (TPmanagerresponse == "TP1")
+            {
+                SendMessageToServer("A1");
+            }
+
+            //here is leading end
+            /*else if (TPmanagerresponse == "TP2")
+            {
+                SendMessageToServer("END1");
+            }
+            */
+        
+
+            //else if (TPmanagerresponse == "TP2")
+            //{
+              //  TPmanagerresponse = "TP1";
+            //}
+            //else 
+            //{
+            
+            //    SendMessageToServer("A");
+           // }
+        }
+
+        else if (collision.gameObject == agent3area)
+        {
+            SendMessageToServer("B");
+        }
+    }
+
+/*private void Update()
+    {
+        if (collision.gameObject == objectB)
+        //if (Input.GetKeyDown(KeyCode.Space))
+        {
+            SendMessageToServer("A");
+        }
+    }
+*/
+
+private void SendMessageToServer(string message)
+    {
+        try
+        {
+            // 将字符串转换为字节数组
+            byte[] data = Encoding.UTF8.GetBytes(message);
+
+            // 发送数据到服务器
+            clientSocket.Send(data);
+
+            Debug.Log("Sent message to server: " + message);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to send data to server: " + e.Message);
+        }
+    }
+
+
+
+    private void ConnectToServer()
+    {
+        try
+        {
+            // 创建Socket对象
+            clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            // 连接服务器
+            IPAddress serverIP = IPAddress.Parse("127.0.0.1");
+            IPEndPoint serverEndPoint = new IPEndPoint(serverIP, 25001);
+            clientSocket.Connect(serverEndPoint);
+
+            // 开始异步接收数据
+            clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, ReceiveCallback, null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to connect to the server: " + e.Message);
+        }
+    }
+
+    private void ReceiveCallback(IAsyncResult asyncResult)
+    {
+        try
+        {
+            // 结束接收数据，并获取接收到的字节数
+            int bytesRead = clientSocket.EndReceive(asyncResult);
+
+            if (bytesRead > 0)
+            {
+                string receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                Message message = JsonUtility.FromJson<Message>(receivedData);
+                string role = message.role;
+                string content = message.content;
+                if (role == "agentmain")
+                {
+                    // 这是来自agentmain的消息
+                    agentmainresponse = content;
+                    Debug.Log("Received message from agentmain: " + content);
+                    // 在这里处理agentmain的消息
+                }
+                else if (role == "agentlala")
+                {
+                    agent2response = content;
+                    // 这是来自agentlala的消息
+                    Debug.Log("Received message from agentlala: " + content);
+                    // 在这里处理agentlala的消息
+                }
+
+                else if (role == "agentlili")
+                {
+                    agent3response = content;
+                    // 这是来自agentlala的消息
+                    Debug.Log("Received message from agentlili: " + content);
+                    // 在这里处理agentlala的消息
+                }
+
+                else if (role == "TPmanager")
+                {
+                    TPmanagerresponse = content;
+                    // 这是来自agentlala的消息
+                    Debug.Log("Received message from TPmanager: " + content);
+                    // 在这里处理agentlala的消息
+                }
+
+                else if (role == "light")
+                {
+                    lightmessage = content;
+                    // 这是来自agentlala的消息
+                    Debug.Log("Received message from light: " + content);
+                    // 在这里处理agentlala的消息
+                }
+
+
+                // 解析接收到的数据
+                //string receivedData = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                //Debug.Log("Received data from server: " + receivedData);
+                //receivedPrompt = receivedData;
+
+            }
+
+            // 继续异步接收数据
+            clientSocket.BeginReceive(buffer, 0, buffer.Length, SocketFlags.None, ReceiveCallback, null);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Failed to receive data from server: " + e.Message);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // 关闭Socket连接
+        if (clientSocket != null && clientSocket.Connected)
+        {
+            clientSocket.Shutdown(SocketShutdown.Both);
+            clientSocket.Close();
+        }
+    }
+}
